@@ -1,6 +1,7 @@
 from pyrogram import Client, filters
 import os
 from pymongo import MongoClient
+from bson import ObjectId  # Import ObjectId to convert string ID to ObjectId
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -38,7 +39,12 @@ def get_file(client, message):
         message.reply_text("Usage: /getfile <file_id>")
         return
 
-    file_id = msg_parts[1]
+    try:
+        file_id = ObjectId(msg_parts[1])  # Convert file_id string to ObjectId
+    except Exception:
+        message.reply_text("❌ Invalid file ID format!")
+        return
+
     file_entry = files_collection.find_one({"_id": file_id})
 
     if file_entry:
