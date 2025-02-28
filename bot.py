@@ -1,7 +1,7 @@
 from pyrogram import Client, filters
 import os
 from pymongo import MongoClient
-from bson import ObjectId  # Import ObjectId to convert string ID to ObjectId
+from bson import ObjectId
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -16,6 +16,7 @@ app = Client("file_store_bot", api_id=API_ID, api_hash=API_HASH, bot_token=BOT_T
 client = MongoClient(MONGO_URI)
 db = client['file_store']
 files_collection = db['files']
+BOT_USERNAME = "your_bot_username"  # Replace with your bot's username
 
 @app.on_message(filters.command("start"))
 def start(client, message):
@@ -30,22 +31,19 @@ def save_file(client, message):
     file_data = {"user_id": user_id, "file_id": file_id, "file_name": file_name}
     file_entry = files_collection.insert_one(file_data)
 
-    message.reply_text(f"✅ File stored!\nID: `{file_entry.inserted_id}`\nUse /getfile {file_entry.inserted_id} to retrieve it.")
+    file_link = f"https://t.me/{BOT_USERNAME}?start=get_{file_entry.inserted_id}"
+    
+    message.reply_text(f"✅ File stored!\nClick below to retrieve it:\n🔗 [Get File]({file_link})", disable_web_page_preview=True)
 
-@app.on_message(filters.command("getfile"))
-def get_file(client, message):
-    msg_parts = message.text.split(" ", 1)
-    if len(msg_parts) < 2:
-        message.reply_text("Usage: /getfile <file_id>")
-        return
+@app.on_message(filters.command("start") & filters.regex(r"^/start get_(.*)$"))
+def send_file(client, message):
+    file_id = message.matches[0].group(1)
 
     try:
-        file_id = ObjectId(msg_parts[1])  # Convert file_id string to ObjectId
+        file_entry = files_collection.find_one({"_id": ObjectId(file_id)})
     except Exception:
-        message.reply_text("❌ Invalid file ID format!")
+        message.reply_text("❌ Invalid or expired file link!")
         return
-
-    file_entry = files_collection.find_one({"_id": file_id})
 
     if file_entry:
         client.send_document(chat_id=message.chat.id, document=file_entry["file_id"], caption=f"📁 {file_entry['file_name']}")
