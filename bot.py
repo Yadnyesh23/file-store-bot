@@ -24,7 +24,15 @@ BOT_USERNAME = "file_23_bot"  # Replace with your bot's username
 # Start command
 @app.on_message(filters.command("start"))
 def start(client, message):
-    message.reply("📁 **Welcome to File Store Bot!**\nSend me any file, and I'll generate a link for you to retrieve it.")
+    if len(message.text.split()) > 1:  # Check if there's a parameter
+        param = message.text.split()[1]
+        if param.startswith("get_"):
+            file_id = param.replace("get_", "")
+            send_file(client, message, file_id)  # Retrieve and send the file
+        else:
+            message.reply("❌ Invalid file link!")
+    else:
+        message.reply("📁 **Welcome to File Store Bot!**\nSend me any file, and I'll generate a link for you to retrieve it.")
 
 # Store files and generate link
 @app.on_message(filters.document | filters.video | filters.photo | filters.audio)
@@ -47,28 +55,20 @@ def save_file(client, message):
 
     message.reply(f"✅ File stored!\nClick below to retrieve it:\n🔗 [Get File]({file_link})", disable_web_page_preview=True)
 
-# Retrieve files via start command
-@app.on_message(filters.command("start"))
-def retrieve_file(client, message):
-    if len(message.text.split()) > 1:
-        param = message.text.split()[1]
-        if param.startswith("get_"):
-            file_id = param.replace("get_", "")
-            send_file(client, message, file_id)
-        else:
-            message.reply("❌ Invalid file link!")
-
+# Function to send file when requested
 def send_file(client, message, file_id):
     try:
         file_entry = files_collection.find_one({"_id": ObjectId(file_id)})
-    except Exception:
-        message.reply("❌ Invalid or expired file link!")
-        return
-
-    if file_entry:
-        client.send_document(chat_id=message.chat.id, document=file_entry["file_id"], caption=f"📁 {file_entry['file_name']}")
-    else:
-        message.reply("❌ File not found!")
+        if file_entry:
+            client.send_document(
+                chat_id=message.chat.id,
+                document=file_entry["file_id"],
+                caption=f"📁 {file_entry['file_name']}"
+            )
+        else:
+            message.reply("❌ File not found!")
+    except Exception as e:
+        message.reply(f"❌ Error retrieving file: {str(e)}")
 
 if __name__ == "__main__":
     print("Bot is running...")
