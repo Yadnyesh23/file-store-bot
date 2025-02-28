@@ -53,7 +53,7 @@ def save_file(client, message):
     file_link = f"https://t.me/{BOT_USERNAME}?start=get_{file_entry.inserted_id}"
     files_collection.update_one({"_id": file_entry.inserted_id}, {"$set": {"file_link": file_link}})
 
-    message.reply(f"✅ File stored!\nClick below to retrieve it:\n {file_link}", disable_web_page_preview=True)
+    message.reply(f" File stored!\nClick below to retrieve it:\n {file_link}", disable_web_page_preview=True)
 
 # Function to send file when requested
 def send_file(client, message, file_id):
@@ -63,7 +63,7 @@ def send_file(client, message, file_id):
             client.send_document(
                 chat_id=message.chat.id,
                 document=file_entry["file_id"],
-                caption=f"📁 {file_entry['file_name']}"
+                caption=f"{file_entry['file_name']}"
             )
         else:
             message.reply("❌ File not found!")
