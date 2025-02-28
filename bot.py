@@ -16,7 +16,7 @@ app = Client("file_store_bot", api_id=API_ID, api_hash=API_HASH, bot_token=BOT_T
 client = MongoClient(MONGO_URI)
 db = client['file_store']
 files_collection = db['files']
-BOT_USERNAME = "@file_23_bot"  # Replace with your bot's username
+BOT_USERNAME = "file_23_bot"  # Replace with your bot's username
 
 @app.on_message(filters.command("start"))
 def start(client, message):
