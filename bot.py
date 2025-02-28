@@ -3,6 +3,7 @@ import os
 from pymongo import MongoClient
 from bson import ObjectId
 from dotenv import load_dotenv
+from pyrogram.types import ReplyKeyboardMarkup  # Import for menu buttons
 
 load_dotenv()
 
@@ -28,39 +29,33 @@ def start(client, message):
         else:
             message.reply("❌ Invalid file link!")
     else:
-        message.reply("📁 Welcome! Send any file, and I'll store it for you.")
+        # Create a menu with buttons
+        keyboard = ReplyKeyboardMarkup(
+            [["📤 Upload File", "📂 My Files"], ["📊 Stats", "ℹ️ Help"]],
+            resize_keyboard=True
+        )
 
-@app.on_message(filters.document | filters.video | filters.photo | filters.audio)
-def save_file(client, message):
-    user_id = message.from_user.id
-    file_id = (
-        message.document.file_id if message.document else
-        message.video.file_id if message.video else
-        message.photo.file_id if message.photo else
-        message.audio.file_id
+        message.reply(
+            "📁 **Welcome to File Store Bot!**\n"
+            "Send any file, and I'll store it for you.\n\n"
+            "**Available Commands:**\n"
+            "📤 Upload File - Send a file to store\n"
+            "📂 My Files - View your stored files\n"
+            "📊 Stats - See file storage stats\n"
+            "ℹ️ Help - Get bot usage instructions",
+            reply_markup=keyboard
+        )
+
+@app.on_message(filters.command("stats"))
+def stats(client, message):
+    total_files = files_collection.count_documents({})
+    user_files = files_collection.count_documents({"user_id": message.from_user.id})
+
+    message.reply(
+        f"📊 **File Storage Stats**\n"
+        f"📂 Total Files Stored: `{total_files}`\n"
+        f"👤 Your Uploaded Files: `{user_files}`"
     )
-    file_name = message.document.file_name if message.document else "file"
-
-    file_data = {"user_id": user_id, "file_id": file_id, "file_name": file_name}
-    file_entry = files_collection.insert_one(file_data)
-
-    file_link = f"https://t.me/{BOT_USERNAME}?start=get_{file_entry.inserted_id}"
-    
-    files_collection.update_one({"_id": file_entry.inserted_id}, {"$set": {"file_link": file_link}})
-
-    message.reply(f"✅ File stored!\nClick below to retrieve it:\n [Get File]({file_link})", disable_web_page_preview=True)
-
-def send_file(client, message, file_id):
-    try:
-        file_entry = files_collection.find_one({"_id": ObjectId(file_id)})
-    except Exception:
-        message.reply("❌ Invalid or expired file link!")
-        return
-
-    if file_entry:
-        client.send_document(chat_id=message.chat.id, document=file_entry["file_id"], caption=f"📁 {file_entry['file_name']}")
-    else:
-        message.reply("❌ File not found!")
 
 if __name__ == "__main__":
     print("Bot is running...")
